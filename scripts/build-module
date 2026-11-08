@@ -1,0 +1,169 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-2.0-only
+"""Build one source group (Touch Bar produces two modules), or all five modules."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+
+from common import (ROOT, GROUPS, MODULES, build_outputs, kernel, module_record, require, run,
+                    save, sha, unprivileged, verify_sources)
+
+
+def generate_integration(dist, receipt):
+    """Render only files in dist; this does not install or approve them."""
+    target = dist / 'integration'
+    target.mkdir(exist_ok=True)
+    version = receipt['kernel']
+    base = '/usr/local/lib/macbookpro-2017-fedora/' + version
+    touch = (ROOT / 'source/integration/touchbar-prepare.py').read_text()
+    touch = touch.replace("KERNEL = '7.2.13-200.fc44.x86_64'", 'KERNEL = ' + repr(version))
+    for name, old_hash, old_id in [
+        ('apple_ibridge', 'ef4ad538c5ead306269c1e552848b6349ef659e5d46cb8a9e5e2610770e0f988', '1fdedc35fbbc906f3e1d65093a195175d775f47f'),
+        ('apple_touchbar', 'e100df0adda71cb1f91ceda43ff57b57abaf23f0185f989738dd9d857b322c84', '9bac481c9f6bd62e85cdc2a9b850de84cb4a5d5c')]:
+        require(old_hash in touch and old_id in touch, 'Touch Bar template identity changed')
+        touch = touch.replace(old_hash, receipt['modules'][name]['sha256']).replace(old_id, receipt['modules'][name]['build_id'])
+    # Avoid collecting boot identifiers in the public helper's local console output.
+    touch = touch.replace("'boot_id': Path('/proc/sys/kernel/random/boot_id').read_text().strip(),", '')
+    (target / 'touchbar-prepare.py').write_text(touch)
+    sleep = (ROOT / 'source/integration/sleep-prepare.py').read_text()
+    sleep = sleep.replace("POLICY = Path('/etc/macbook-sleep/verified-kernels.json')", "POLICY = Path('" + base + "/sleep-policy.json')")
+    (target / 'sleep-prepare.py').write_text(sleep)
+    r = receipt['modules']['tb_ar_shim_mbp142']
+    save(target / 'sleep-policy.json', {'model': 'MacBookPro14,2', 'module': 'tb_ar_shim_mbp142',
+         'scope': 'new local build; manual trial required, not hardware approval',
+         'kernels': {version: {k: r[k] for k in ['sha256', 'version', 'srcversion']}}})
+    boot = '''#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-2.0-only
+"""Load only the exact, root-owned module files selected for this local trial."""
+import hashlib, json, os, pathlib, subprocess
+BASE = pathlib.Path(__file__).resolve().parent
+MANIFEST = json.loads((BASE / 'manifest.json').read_text())
+def require(ok, message):
+    if not ok: raise RuntimeError(message)
+require(os.geteuid() == 0, 'Root required')
+require(pathlib.Path('/sys/class/dmi/id/product_name').read_text().strip() == 'MacBookPro14,2', 'Wrong model')
+require(os.uname().release == MANIFEST['kernel'], 'Wrong kernel')
+for name in ['brcmfmac', 'snd_hda_codec_cs8409']:
+    r = MANIFEST['modules'][name]
+    p = pathlib.Path('/usr/lib/modules') / MANIFEST['kernel'] / r['install_relative_path']
+    st = p.stat()
+    require(st.st_uid == 0 and not st.st_mode & 0o022, 'Unsafe module ownership')
+    require(hashlib.sha256(p.read_bytes()).hexdigest() == r['sha256'], 'Module hash mismatch')
+    chosen = subprocess.check_output(['modinfo', '-n', name], text=True).strip()
+    require(pathlib.Path(chosen).resolve() == p.resolve(), 'Unexpected module resolution')
+    require(subprocess.check_output(['modinfo','-F','vermagic',p],text=True).split()[0] == MANIFEST['kernel'], 'Wrong vermagic')
+    subprocess.run(['modprobe', name], check=True)
+    b = (pathlib.Path('/sys/module') / name / 'notes/.note.gnu.build-id').read_bytes()
+    offset = 12 + ((int.from_bytes(b[:4], 'little') + 3) // 4) * 4
+    size = int.from_bytes(b[4:8], 'little')
+    require(b[offset:offset+size].hex() == r['build_id'], 'Unexpected loaded module')
+subprocess.run(['/usr/bin/python3', '-I', str(BASE / 'touchbar-prepare.py')], check=True)
+'''
+    (target / 'boot.py').write_text(boot)
+    save(target / 'manifest.json', {'kernel': version, 'modules': receipt['modules']})
+    (target / 'macbookpro-2017-fedora.service').write_text(
+        '[Unit]\nDescription=Exact-kernel MacBookPro14,2 audio, Wi-Fi and Touch Bar\n'
+        'After=systemd-modules-load.service systemd-udev-trigger.service usbmuxd.service\n'
+        'ConditionKernelVersion=' + version + '\n\n[Service]\nType=oneshot\n'
+        'ExecStart=/usr/bin/python3 -I ' + base + '/boot.py\nRemainAfterExit=yes\nTimeoutStartSec=45s\n\n'
+        '[Install]\nWantedBy=multi-user.target\n')
+    (target / '80-macbookpro-2017-prepare.conf').write_text(
+        '[Service]\nExecStartPre=/usr/bin/python3 -I ' + base + '/sleep-prepare.py\n')
+    (target / '80-macbookpro-2017-s2idle.conf').write_text('[Sleep]\nSuspendState=mem\nMemorySleepMode=s2idle\n')
+    for rule in (ROOT / 'source/integration').glob('*.rules'):
+        shutil.copyfile(rule, target / rule.name)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('group', choices=[*GROUPS, 'all'])
+    ap.add_argument('kernel', type=kernel)
+    a = ap.parse_args()
+    unprivileged()
+    identity = verify_sources()
+    prepared = ROOT / 'local/kernel' / a.kernel
+    state = json.loads((prepared / 'prepared.json').read_text())
+    require(state['status'] == 'ready_to_build' and state['source_manifest_sha256'] == identity,
+            'Sources were not successfully prepared for this source snapshot')
+    for name, digest in state['prepared_files'].items():
+        require(sha(prepared / name) == digest, 'Prepared source/header changed: ' + name)
+    headers = prepared / 'devel/usr/src/kernels' / a.kernel
+    gcc = run(['gcc', '-dumpfullversion'])
+    configured = re.search(r'^CONFIG_GCC_VERSION=(\d+)$', (headers / '.config').read_text(), re.M)
+    require(configured and int(gcc.split('.')[0]) == int(configured.group(1)) // 10000,
+            'GCC major version differs from the target kernel; review the build toolchain')
+    exports = {l.split()[1] for l in (headers / 'Module.symvers').read_text().splitlines()}
+    dist = ROOT / 'dist' / a.kernel
+    dist.mkdir(parents=True, exist_ok=True)
+    receipt_path = dist / 'build.json'
+    receipt = json.loads(receipt_path.read_text()) if receipt_path.exists() else {
+        'kernel': a.kernel, 'source_manifest_sha256': identity, 'compiler': run(['gcc', '--version']).splitlines()[0],
+        'modules': {}, 'groups': {}, 'installed': False, 'hardware_validated': False,
+        'status': 'building', 'offline_resolution_passed': False}
+    require(receipt['source_manifest_sha256'] == identity, 'Existing dist was built from different sources')
+    require(receipt['status'] != 'stopped_for_review', 'A previous build stopped; investigate before retrying')
+    require(not receipt['offline_resolution_passed'], 'Verified dist is frozen; use a fresh checkout for another build')
+    groups = list(GROUPS) if a.group == 'all' else [a.group]
+    try:
+        for group in groups:
+            work = ROOT / 'local/build' / a.kernel / group
+            require(not work.exists() and group not in receipt['groups'],
+                    'Build already exists; preserve it and investigate before retrying: ' + group)
+            work.parent.mkdir(parents=True, exist_ok=True)
+            if group == 'wifi':
+                shutil.copytree(prepared / 'wifi-source', work)
+                for patch in ['femctrl-v3.patch', 'local-resume-extension.patch']:
+                    p = ROOT / 'source/wifi' / patch
+                    subprocess.run(['git', 'apply', '--check', '-p6', str(p)], cwd=work, check=True)
+                    subprocess.run(['git', 'apply', '-p6', str(p)], cwd=work, check=True)
+                build = work / 'brcmfmac'
+            else:
+                shutil.copytree(ROOT / 'source' / group, work)
+                build = work
+            prefix = '-fdebug-prefix-map=' + str(ROOT) + '=/usr/src/macbookpro-2017-fedora '
+            prefix += '-ffile-prefix-map=' + str(ROOT) + '=/usr/src/macbookpro-2017-fedora'
+            flags = '-Werror ' + prefix
+            cmd = ['make', '-j2', '-C', str(headers), 'M=' + str(build), 'W=1']
+            if group == 'audio':
+                flags += ' -Wno-error=unused-but-set-variable -Wno-error=unused-const-variable'
+                cmd += ['CFLAGS_MODULE=-DAPPLE_PINSENSE_FIXUP -DAPPLE_CODECS -DCONFIG_SND_HDA_RECONFIG=1 -Wno-unused-variable -Wno-unused-function']
+            cmd += ['KCFLAGS=' + flags, 'modules']
+            print('Building ' + group + ' for ' + a.kernel, flush=True)
+            with (work / 'build.log').open('w') as log:
+                result = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT)
+            require(result.returncode == 0, 'Build failed; inspect local/build/<kernel>/' + group + '/build.log')
+            symbols = exports | {l.split()[1] for l in (build / 'Module.symvers').read_text().splitlines()}
+            found = build_outputs(group, build)
+            for name, filename in GROUPS[group].items():
+                record = module_record(found[filename], a.kernel, symbols)
+                require(record['name'] == name, 'Unexpected module name')
+                require(not (dist / filename).exists(), 'Refusing to overwrite an existing module')
+                shutil.copyfile(found[filename], dist / filename)
+                receipt['modules'][name] = record
+            receipt['groups'][group] = {'build_passed': True,
+                'warning_categories': sorted(set(re.findall(r'\[-W([^\]]+)\]', (work / 'build.log').read_text())))}
+            save(receipt_path, receipt)
+        receipt['status'] = 'all_five_built' if set(receipt['modules']) == set(MODULES) else 'partial_build'
+        if receipt['status'] == 'all_five_built':
+            generate_integration(dist, receipt)
+            (dist / 'SHA256SUMS').write_text(''.join(sha(p) + '  ' + p.relative_to(dist).as_posix() + '\n'
+                for p in sorted(dist.rglob('*')) if p.is_file() and p.name not in ['SHA256SUMS', 'build.json']))
+    except Exception as e:
+        receipt.update(status='stopped_for_review', error=str(e))
+        raise
+    finally:
+        save(receipt_path, receipt)
+    print('Built locally; no modules installed/loaded. Run scripts/check-dist before considering installation.')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as e:
+        print('STOP: ' + str(e), file=sys.stderr)
+        sys.exit(1)

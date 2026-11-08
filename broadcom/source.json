@@ -1,0 +1,10 @@
+{
+  "description": "Reference only; no board file is distributed here",
+  "repository": "https://github.com/jsoyer/MacBookPro14-2",
+  "commit": "cf41a0e65e11ef55b3bdcf4bdd460dcb2ac7db8e",
+  "url": "https://raw.githubusercontent.com/jsoyer/MacBookPro14-2/cf41a0e65e11ef55b3bdcf4bdd460dcb2ac7db8e/firmware/brcm/brcmfmac43602-pcie.txt",
+  "git_blob_before_personalization": "bd7af7c6f01df3ccee1471d36cb8df15d618a6aa",
+  "license": "Unknown; do not infer the project GPL applies to the external file",
+  "personalization": "Replace macaddr with the target machine's permanent Wi-Fi MAC address before installing; keep the downloaded/personalized file outside Git",
+  "fedora_destination": "/usr/lib/firmware/brcm/brcmfmac43602-pcie.Apple Inc.-MacBookPro14,2.txt"
+}

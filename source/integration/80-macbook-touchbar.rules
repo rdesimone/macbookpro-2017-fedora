@@ -1,0 +1,4 @@
+# Keep only this T1 iBridge out of runtime autosuspend; never switch configuration.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="05ac", ATTR{idProduct}=="8600", TEST=="power/control", ATTR{power/control}="on"
+# UVC probe enables parent autosuspend; restore this T1-only policy after binding.
+ACTION=="bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTRS{idVendor}=="05ac", ATTRS{idProduct}=="8600", TEST=="../power/control", ATTR{../power/control}="on"

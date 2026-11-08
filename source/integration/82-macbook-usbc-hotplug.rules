@@ -1,0 +1,3 @@
+# MacBookPro14,2: keep only the two Alpine Ridge external xHCI controllers awake.
+# Runtime idle policy only; normal system suspend and USB-device policies remain.
+ACTION=="add|bind", SUBSYSTEM=="pci", KERNEL=="0000:06:00.0|0000:7c:00.0", ATTR{vendor}=="0x8086", ATTR{device}=="0x15d4", DRIVER=="xhci_hcd", PROGRAM=="/usr/bin/cat /sys/class/dmi/id/product_name", RESULT=="MacBookPro14,2", TEST=="power/control", ATTR{power/control}="on"

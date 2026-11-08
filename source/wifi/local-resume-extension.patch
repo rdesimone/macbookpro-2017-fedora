@@ -1,0 +1,44 @@
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
+@@ -762,6 +762,9 @@
+ 		  val);
+ 	WRITECC32(devinfo, chipcontrol,
+ 		  val | BRCMF_CC_CHIPCTL_4360_DISCRETE_FEMCTRL_MODE);
++	/* Read back to flush the write and make the tested state observable. */
++	brcmf_info("Apple BCM43602 FEMCTRL: 0x%08x -> 0x%08x\n",
++		   val, READCC32(devinfo, chipcontrol));
+ }
+ 
+ static int brcmf_pcie_enter_download_state(struct brcmf_pciedev_info *devinfo)
+@@ -2708,6 +2711,7 @@
+ 	struct brcmf_pciedev_info *devinfo;
+ 	struct brcmf_bus *bus;
+ 	struct pci_dev *pdev;
++	u32 resume_window;
+ 	int err;
+ 
+ 	brcmf_dbg(PCIE, "Enter\n");
+@@ -2715,6 +2719,23 @@
+ 	bus = dev_get_drvdata(dev);
+ 	devinfo = bus->bus_priv.pcie->devinfo;
+ 	brcmf_dbg(PCIE, "Enter, dev=%p, bus=%p\n", dev, bus);
++
++	/*
++	 * Local MacBookPro14,2 trial: firmware can survive sleep while the
++	 * platform control state changes. Restore FEM mode before deciding
++	 * whether a hot resume is possible. FEM access selects ChipCommon,
++	 * so restore the PCIe window before reading its interrupt mask.
++	 */
++	if (devinfo->ci && devinfo->ci->chip == BRCM_CC_43602_CHIP_ID &&
++	    devinfo->pdev->subsystem_vendor == PCI_VENDOR_ID_APPLE &&
++	    devinfo->pdev->subsystem_device == 0x0157) {
++		if (!pci_read_config_dword(devinfo->pdev, BRCMF_PCIE_BAR0_WINDOW,
++					   &resume_window))
++			brcmf_info("Apple BCM43602 resume BAR0 window: 0x%08x\n",
++				   resume_window);
++		brcmf_pcie_43602_apple_femctrl(devinfo);
++		brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
++	}
+ 
+ 	/* Check if device is still up and running, if so we are ready */
+ 	if (brcmf_pcie_read_reg32(devinfo, devinfo->reginfo->intmask) != 0) {

@@ -1,0 +1,106 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-2.0-only
+"""Download/verify exact Fedora RPMs and prepare isolated matching kernel sources."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+
+from common import (ROOT, BASELINE, BASELINE_SHA, RUNTIME, WIRELESS, audio_check,
+                    kernel, require, rpm_check, run, save, sha, subset,
+                    unprivileged, unpack_rpm, verify_sources)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('kernel', type=kernel)
+    ap.add_argument('--rpms-dir', type=lambda p: Path(p).resolve(),
+                    help='Use already downloaded exact signed RPMs, without network access')
+    a = ap.parse_args()
+    unprivileged()
+    source_identity = verify_sources()
+    version = a.kernel.removesuffix('.x86_64')
+    base_version = BASELINE.removesuffix('.x86_64')
+    release = re.search(r'\.fc(44|45)\.', a.kernel).group(1)
+    packages = [('kernel-devel', version, 'x86_64'), ('kernel', version, 'src'),
+                ('kernel', base_version, 'src')] + [(n, version, 'x86_64') for n in RUNTIME]
+    output = ROOT / 'local/kernel' / a.kernel
+    require(not output.exists(), 'Preparation directory already exists; keep it for diagnosis or remove it deliberately')
+    rpms = a.rpms_dir or ROOT / 'local/rpms'
+    if a.rpms_dir is None:
+        rpms.mkdir(parents=True, exist_ok=True)
+        cache = ROOT / 'local/dnf-cache'
+        for name, ver, arch in packages:
+            path = rpms / f'{name}-{ver}.{arch}.rpm'
+            if path.exists():
+                continue
+            target_release = re.search(r'\.fc(44|45)$', ver).group(1)
+            cmd = ['dnf5', '--releasever=' + target_release, '--repo=fedora', '--repo=updates',
+                   '--refresh', '--setopt=cachedir=' + str(cache), '--setopt=logdir=' + str(cache / 'log'),
+                   '--setopt=fedora.skip_if_unavailable=False', '--setopt=updates.skip_if_unavailable=False',
+                   'download', '--destdir=' + str(rpms)]
+            if arch == 'src':
+                cmd.append('--srpm')
+                spec = name + '-' + ver
+            else:
+                spec = name + '-' + ver + '.' + arch
+            subprocess.run(cmd + [spec], check=True)
+    records = []
+    for name, ver, arch in packages:
+        records.append(rpm_check(rpms / f'{name}-{ver}.{arch}.rpm', name, ver, arch))
+    require(sha(rpms / f'kernel-{base_version}.src.rpm') == BASELINE_SHA,
+            'The pinned Fedora audio comparison baseline differs')
+    output.mkdir(parents=True)
+    report = {'kernel': a.kernel, 'status': 'preparing', 'source_manifest_sha256': source_identity,
+              'fedora_release': release, 'packages': records, 'rpm_directory': str(rpms),
+              'installed': False, 'hardware_validated': False}
+    try:
+        print('Extracting signed Fedora source/devel packages without installation.', flush=True)
+        unpack_rpm(rpms / f'kernel-devel-{a.kernel}.rpm', output / 'devel',
+                   ['./usr/src/kernels/' + a.kernel + '/*'])
+        unpack_rpm(rpms / f'kernel-{version}.src.rpm', output / 'srpm', ['*.tar.xz', '*.patch'])
+        unpack_rpm(rpms / f'kernel-{base_version}.src.rpm', output / 'baseline-srpm', ['*.tar.xz', '*.patch'])
+        headers = output / 'devel/usr/src/kernels' / a.kernel
+        require((headers / 'include/config/kernel.release').read_text().strip() == a.kernel,
+                'Generated development headers target another kernel')
+        print('Comparing audio APIs and watched power/input/Wi-Fi sources.', flush=True)
+        old, old_watch, unused = subset(output / 'baseline-srpm', '7.2.13')
+        new, new_watch, patches = subset(output / 'srpm', a.kernel.split('-')[0])
+        report['audio_compatibility'] = audio_check(old, new, headers)
+        changed = sorted(n for n in old_watch.keys() | new_watch.keys() if old_watch.get(n) != new_watch.get(n))
+        report['changed_watched_paths'] = changed
+        require(not changed, 'Watched PCI/USB/HID/power/Wi-Fi source changed; review required: ' + ', '.join(changed[:12]))
+        report['fedora_patch_paths'] = patches
+        for name, data in new.items():
+            if name.startswith(WIRELESS):
+                path = output / 'wifi-source' / name.removeprefix(WIRELESS)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+        config = headers / '.config'
+        require('CONFIG_CC_IS_GCC=y' in config.read_text(), 'This build recipe currently requires GCC-based kernel headers')
+        report['config_modversions'] = 'CONFIG_MODVERSIONS=y' in config.read_text()
+        # Freeze the entire prepared headers, matching Wi-Fi source and RPM patches.
+        report['prepared_files'] = {
+            p.relative_to(output).as_posix(): sha(p)
+            for folder in [output / 'devel', output / 'wifi-source']
+            for p in sorted(folder.rglob('*')) if p.is_file() and not p.is_symlink()
+        }
+        report['status'] = 'ready_to_build'
+    except Exception as e:
+        report.update(status='stopped_for_review', error=str(e))
+        raise
+    finally:
+        save(output / 'prepared.json', report)
+    print('Ready: matching sources and headers prepared. No package, module or hook installed.')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as e:
+        print('STOP: ' + str(e), file=sys.stderr)
+        sys.exit(1)

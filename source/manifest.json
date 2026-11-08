@@ -1,0 +1,64 @@
+{
+  "files": {
+    "source/audio/Makefile": "b7439d9319e734cf57b42107914bec87d9e5d5d6a7a878167f3dcf28714caad7",
+    "source/audio/codecs/Makefile": "5bb541bdfc692020e537c79d800a53ebbc23c1c70d8ef5241fb5011a1c5deb7a",
+    "source/audio/codecs/cirrus/Makefile": "3c4e6cceb04141bc0172af060520fa6dc4e7facc8910594b22e36b395091a921",
+    "source/audio/codecs/cirrus/cirrus_apple.h": "c410540874beff8e7befd1e4b472d57dad50821c173b3b96fd4af52ac4431949",
+    "source/audio/codecs/cirrus/cs8409-tables.c": "15bbfda8ad3bf245d0ecaf592ca9775c5c196a4a358c11a50a6cff6684996836",
+    "source/audio/codecs/cirrus/cs8409.c": "06fdc482058b840ccce20e1d522bf0331442b995fe3f147add1611f3a52bee80",
+    "source/audio/codecs/cirrus/cs8409.h": "8eb7d8d4f1c5e7526b777af24582ebc32e2487021976885d317416991e2dddda",
+    "source/audio/codecs/cirrus/patch_cirrus_boot84.h": "c5efdcec9cdf9cfc5b4975b4d238cdad98e2c4302e0c4067c70b73234b185fb9",
+    "source/audio/codecs/cirrus/patch_cirrus_hda_generic_copy.h": "f405aa473b5aa0bfccb139a05e632dabe73af6aeb5757ab33d990c7571a3c281",
+    "source/audio/codecs/cirrus/patch_cirrus_new84.h": "b580444189e89ef211172192e3a5f901828d7ffb5eacfdf8813a7b86d048e18e",
+    "source/audio/codecs/cirrus/patch_cirrus_real84.h": "a2c0a96cefc8adff9b5791d2ea93580ceb02d97012216dfbd37bd4b529a14c25",
+    "source/audio/codecs/cirrus/patch_cirrus_real84_i2c.h": "5becd39e05b8a27e7a337fc1651a4fe6c71d21be47c934cd76407351f24d4f5a",
+    "source/audio/codecs/generic.h": "9175959750d86f715d15eb2e4c063a95861ed7d737418e9f55843b1af04446d6",
+    "source/audio/codecs/side-codecs/hda_component.h": "71559a1d0d50d05e63b593dac96a041791292500dfedd606334804487fbcc8ae",
+    "source/audio/common/Makefile": "b35818428f2d015bcb2a9492e09f5f42c28e1dee5ea08d14ccd0cdda556cdef3",
+    "source/audio/common/controller_trace.h": "a92ffc1a878b17ea4953b76033bf04964643512ca93ec18544df45176828dfc0",
+    "source/audio/common/hda_auto_parser.h": "59c9e34e50f22e36ddc45dc22ca822838104e745884e6841bee73e65876a0716",
+    "source/audio/common/hda_beep.h": "9e943b14f5ab34c3d96474adb9f7ad289e8e413616af4c1ff69c93ad7f7cf4cf",
+    "source/audio/common/hda_controller.h": "42b5810a1c3b3226f9cc08b8dc552483bcb4f24fad6e4ba27cc70140fabf962b",
+    "source/audio/common/hda_jack.h": "b6af84afebab898958e2a972acab3783ed1849c826961f8333f01bd127572b49",
+    "source/audio/common/hda_local.h": "21b31260451c5fd4868f030cad31b86012acd3e5091caaa39a902d648073d2a9",
+    "source/integration/80-macbook-touchbar.rules": "3ded2a202900c336ab7e1c0e63d09550399015aeda0b10066fcf1165e8fbac3a",
+    "source/integration/81-macbook-t1-wakeup.rules": "86f6a78c965e080146230654d79f145cc5afaf9deac31fc1cdb98ba041a32893",
+    "source/integration/82-macbook-usbc-hotplug.rules": "1c3fec3840d0be57613f66ec191b1e01e96db8db0b0dd9d3a815d1e30467bf18",
+    "source/integration/sleep-prepare.py": "6d23d1683b696979264566730e28ab2b7e54ab90f112edcd3ac8ebc5ec2de676",
+    "source/integration/touchbar-prepare.py": "299b742f0d0de098956d93e18e6a15aef8f15348c7fb82f319d3fb214a293490",
+    "source/sleep/Makefile": "74f70f0e0cace27c8e68929f45c328ab114410dde79f3f8ce46647ddd9f6ce1e",
+    "source/sleep/tb_ar_shim_mbp142.c": "fbfd1e30a197aa37e614a00a163cc80fde4dd9be04b277014002a448bfc81536",
+    "source/touchbar/LICENSE": "db296f2f7f35bca3a174efb0eb392b3b17bd94b341851429a3dff411b1c2fc73",
+    "source/touchbar/Makefile": "0b83960367a409292ce1b12c2d3cb62aa3a1bf9b5a911a999b9de1a222f33982",
+    "source/touchbar/apple-ibridge.c": "c0d7cb608166c40c961a701a5c114fc40cd18175a9495baf5705021d763e7127",
+    "source/touchbar/apple-ibridge.h": "34d7c6c294a657b3675502e9e082cb5499ef0204c4a0206360be7498a3754754",
+    "source/touchbar/apple-touchbar.c": "a35d7812ccf516b294b638c600b556a220f6458d5471d3b28463b78bfe99e7fc",
+    "source/touchbar/hid-ids.h": "70b551b047fc5c4e8c029764b64ef0a6167aa93b55913459f8df487ec1be2974",
+    "source/wifi/femctrl-v3.patch": "8bfb05620f2c304cf36d0665ec521b2b16af3bdd758f7b42d4a6d87d190a2789",
+    "source/wifi/local-resume-extension.patch": "e525824e3cade1136261d5e4b64f0e237ca6bc94bdab81301e0f94a4fac69f90"
+  },
+  "origins": {
+    "sleep": {
+      "repository": "https://github.com/orospakr/linux-apple-alpine-ridge-suspend",
+      "commit": "155ffe3a4a963bc8d84df72fa53f14eb16ea9a60",
+      "adaptation": "two controller contexts and exact-model registration guards"
+    },
+    "audio": {
+      "repository": "https://github.com/davidjo/snd_hda_macbookpro",
+      "commit": "89b22ff90b86468b186706861dd18663562defa7",
+      "fedora_source": "kernel-7.2.13-200.fc44.src.rpm",
+      "fedora_source_sha256": "0ccfb082765ab8756d351eba49f9415ce5d3ddc378e8fd0d430dbe240192d241"
+    },
+    "touchbar": {
+      "repository": "https://github.com/AJ-dev-i60/t1-touchbar",
+      "commit": "20d65c7b0fe6d05ea9734f869b27384a62de5109",
+      "resume_commit": "a33c7eb27777339c047b8f532d1e6baebaec46bd",
+      "adaptation": "model, HID interface and power guards"
+    },
+    "wifi": {
+      "source": "matching signed Fedora kernel source",
+      "upstream_patch": "https://lore.kernel.org/linux-wireless/20261101172011.1591620-1-dolph-in@yandex.ru/",
+      "local_extension": "hot-resume FEM restoration, PCIe window restoration, read-back diagnostics"
+    }
+  }
+}

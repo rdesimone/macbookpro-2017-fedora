@@ -1,0 +1,76 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-2.0-only
+"""Check all five modules against an isolated Fedora module tree. Never load them."""
+import argparse
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+from common import (ROOT, MODULES, RUNTIME, kernel, require, rpm_check, run,
+                    save, sha, unprivileged, unpack_rpm, verify_sources)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('kernel', type=kernel)
+    a = ap.parse_args()
+    unprivileged()
+    prepared = ROOT / 'local/kernel' / a.kernel
+    state = json.loads((prepared / 'prepared.json').read_text())
+    dist = ROOT / 'dist' / a.kernel
+    receipt = json.loads((dist / 'build.json').read_text())
+    require(receipt['source_manifest_sha256'] == verify_sources(), 'Source snapshot differs from this build')
+    require(receipt['status'] == 'all_five_built' and set(receipt['modules']) == set(MODULES),
+            'All five successful builds are required')
+    for name, r in receipt['modules'].items():
+        require(r['file'] == MODULES[name] and sha(dist / r['file']) == r['sha256'], 'Module changed: ' + name)
+        require(run(['modinfo', '-F', 'vermagic', dist / r['file']]).split()[0] == a.kernel,
+                'Wrong kernel in module: ' + name)
+    subprocess.run(['sha256sum', '--check', '--strict', 'SHA256SUMS'], cwd=dist, check=True)
+    work = ROOT / 'local/checks' / a.kernel
+    require(not work.exists(), 'Offline check directory already exists; preserve it for diagnosis')
+    work.mkdir(parents=True)
+    offline = work / 'root'
+    offline.mkdir()
+    records = []
+    version = a.kernel.removesuffix('.x86_64')
+    for name in RUNTIME:
+        package = Path(state['rpm_directory']) / (name + '-' + a.kernel + '.rpm')
+        record = rpm_check(package, name, version, 'x86_64')
+        require(record in state['packages'], 'Runtime package changed after preparation')
+        records.append(record)
+        folder = work / name
+        unpack_rpm(package, folder, ['./lib/modules/*'])
+        shutil.copytree(folder / 'lib', offline / 'lib', symlinks=True, dirs_exist_ok=True)
+    tree = offline / 'lib/modules' / a.kernel
+    for r in receipt['modules'].values():
+        target = tree / r['install_relative_path']
+        require(not target.exists(), 'Candidate destination already exists in stock tree')
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(dist / r['file'], target)
+    # Both commands explicitly point at our disposable tree. There is no live depmod/modprobe.
+    subprocess.run(['depmod', '-b', str(offline), '-a', a.kernel], check=True)
+    lookups = {}
+    for name, r in receipt['modules'].items():
+        chosen = Path(run(['modinfo', '-b', offline, '-k', a.kernel, '-n', name]))
+        require(chosen.resolve() == (tree / r['install_relative_path']).resolve(), 'Unexpected module selection: ' + name)
+        dependencies = run(['modprobe', '-d', offline, '-S', a.kernel, '--show-depends', name])
+        require(bool(dependencies), 'No dependency resolution output: ' + name)
+        lookups[name] = {'selected': r['install_relative_path'], 'dependency_resolution_passed': True}
+    result = {'kernel': a.kernel, 'offline_resolution_passed': True, 'packages': records,
+              'module_lookups': lookups, 'installed': False, 'modules_loaded': False,
+              'hardware_validated': False}
+    save(dist / 'offline-check.json', result)
+    receipt.update(offline_resolution_passed=True, status='offline_checks_passed')
+    save(dist / 'build.json', receipt)
+    print('PASS: all five exact-kernel modules resolve in the isolated Fedora tree. Hardware remains untested for these new binaries.')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as e:
+        print('STOP: ' + str(e), file=sys.stderr)
+        sys.exit(1)

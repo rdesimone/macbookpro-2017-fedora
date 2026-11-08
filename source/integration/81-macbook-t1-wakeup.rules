@@ -1,0 +1,4 @@
+# MacBookPro14,2: T1 wake restriction validated in a one-hour s2idle lid test.
+# Keep normal T1 operation/runtime policy; only prevent this USB device from waking.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="05ac", ATTR{idProduct}=="8600", TEST=="power/wakeup", ATTR{power/wakeup}="disabled"
+ACTION=="bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTRS{idVendor}=="05ac", ATTRS{idProduct}=="8600", TEST=="../power/wakeup", ATTR{../power/wakeup}="disabled"
