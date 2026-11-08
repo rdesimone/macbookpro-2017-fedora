@@ -4,9 +4,9 @@ Source code, patches and manual build/install instructions for the fixes used on
 
 **Tested environment:** Fedora 45 running `7.2.15-200.fc44.x86_64` with five matching custom modules. The `fc44` suffix is intentional: this accepted Fedora kernel was retained during the Fedora 45 userspace upgrade. The separate `7.2.15-300.fc45` build has not been tested. Detailed sleep/wake tests preceded the OS upgrade; startup checks and an owner quick functional check passed afterward. These results cover one machine and specific builds, not every Fedora 45/kernel update.
 
-**Experimental software, provided without warranty. Compatibility with similar Macs is not guaranteed. Try it at your own risk.** Have an installed, working recovery kernel and an independent way to read these instructions before changing drivers. A successful build does not prove hardware compatibility.
+**Experimental software, provided without warranty. Compatibility with similar Macs is not guaranteed. Try it at your own risk.** Local code adaptations, build scripts and documentation were prepared with AI assistance from OpenAI Codex; upstream drivers retain their original authorship and licences. Have an installed, working recovery kernel and an independent way to read these instructions before changing drivers. A successful build does not prove hardware compatibility.
 
-Fedora supplies the complete kernel. We build five additional/replacement **modules**, not a complete custom kernel. Sources largely come from the upstream projects credited below, with model-specific adaptations. No upstream authorship is claimed. This repository was assembled with Codex assistance.
+Fedora supplies the complete kernel. We build five additional/replacement **modules**, not a complete custom kernel. Sources largely come from the upstream projects credited below, with model-specific adaptations. No upstream authorship is claimed.
 
 ## What is included
 
