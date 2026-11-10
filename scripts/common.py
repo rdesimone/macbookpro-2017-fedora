@@ -32,8 +32,8 @@ def unprivileged():
 
 
 def kernel(value):
-    require(re.fullmatch(r'7\.2\.\d+-\d+\.fc(?:44|45)\.x86_64', value),
-            'Expected an exact Fedora 44/45 x86_64 7.2 kernel release; other families need review')
+    require(re.fullmatch(r'(?:7\.2\.\d+-\d+\.fc(?:44|45)|7\.3\.\d+-\d+\.fc45)\.x86_64', value),
+            'Expected exact Fedora 44/45 7.2 or Fedora 45 7.3 x86_64 syntax; other families need review')
     return value
 
 
@@ -124,7 +124,47 @@ def subset(folder, version):
     return files, watch, sorted(patch_paths)
 
 
-def audio_check(old, new, headers):
+def kernel_profile(version, packages):
+    """Permit only the reviewed 7.3.3 signed inputs, not arbitrary 7.3 changes."""
+    if not version.startswith('7.3.'):
+        return None
+    profile = json.loads((ROOT / 'source/kernel-compat/7.3.json').read_text())
+    require(profile['schema'] == 1 and profile['baseline_kernel'] == BASELINE and
+            profile['reference_kernel'] == version,
+            'This 7.3 release needs a new exact source/devel compatibility review')
+    for name, key in [('kernel', 'reference_source_rpm_sha256'),
+                      ('kernel-devel', 'reference_devel_rpm_sha256')]:
+        matches = [p for p in packages if p['identity'][0] == name and
+                   p['identity'][1] + '-' + p['identity'][2] + '.x86_64' == version]
+        require(len(matches) == 1 and matches[0]['sha256'] == profile[key],
+                'Signed input differs from the reviewed 7.3 profile: ' + name)
+    return profile
+
+
+def watched_check(old, new, profile=None):
+    changed = sorted(n for n in old.keys() | new.keys() if old.get(n) != new.get(n))
+    if profile is None:
+        require(not changed, 'Watched PCI/USB/HID/power/Wi-Fi source changed; review required: ' + ', '.join(changed[:12]))
+    else:
+        digest = hashlib.sha256(json.dumps(changed, separators=(',', ':')).encode()).hexdigest()
+        require(len(changed) == profile['changed_watched_paths_count'] and
+                digest == profile['changed_watched_paths_sha256'],
+                'Watched source changes differ from the reviewed 7.3 profile')
+    return changed
+
+
+def prepare_wifi(work):
+    """Apply every reviewed patch strictly; an upstream fix/context change must stop."""
+    patches = []
+    for name in ['femctrl-v3.patch', 'local-resume-extension.patch', 'cold-resume.patch']:
+        path = ROOT / 'source/wifi' / name
+        subprocess.run(['git', 'apply', '--check', '-p6', str(path)], cwd=work, check=True)
+        subprocess.run(['git', 'apply', '-p6', str(path)], cwd=work, check=True)
+        patches.append({'file': name, 'sha256': sha(path)})
+    return {'patches': patches, 'patched_pcie_sha256': sha(work / 'brcmfmac/pcie.c')}
+
+
+def audio_check(old, new, headers, profile=None):
     paths = ['sound/hda/' + p.relative_to(ROOT / 'source/audio').as_posix()
              for p in (ROOT / 'source/audio').rglob('*')
              if p.is_file() and p.name != 'Makefile' and
@@ -132,14 +172,26 @@ def audio_check(old, new, headers):
     require({'sound/hda/codecs/cirrus/cs8409.c', 'sound/hda/codecs/cirrus/cs8409.h'} <= set(paths),
             'Audio comparison baseline is incomplete')
     changed = [p for p in paths if old[p] != new.get(p)]
-    require(not changed, 'Private audio APIs changed; review required: ' + ', '.join(changed))
+    refreshes = {}
+    if profile is None:
+        require(not changed, 'Private audio APIs changed; review required: ' + ', '.join(changed))
+    else:
+        refreshes = profile['audio_headers']
+        require(set(refreshes) == {'sound/hda/common/hda_auto_parser.h', 'sound/hda/common/hda_local.h'} and
+                set(changed) == set(refreshes),
+                'Private audio APIs changed outside the reviewed 7.3 header profile')
+        for name, hashes in refreshes.items():
+            require(hashlib.sha256(old[name]).hexdigest() == hashes['baseline_sha256'] and
+                    hashlib.sha256(new[name]).hexdigest() == hashes['target_sha256'],
+                    'Private audio header differs from reviewed 7.3 bytes: ' + name)
     count = 0
     for name, data in new.items():
         if name.startswith('include/sound/') and (headers / name).is_file():
             require((headers / name).read_bytes() == data, 'Source/devel sound header mismatch: ' + name)
             count += 1
     require(count > 100, 'Too few public sound headers compared')
-    return {'private_paths_compared': paths, 'public_headers_compared': count}
+    return {'private_paths_compared': paths, 'public_headers_compared': count,
+            'reviewed_private_header_refreshes': refreshes}
 
 
 def destination(name, filename):

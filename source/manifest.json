@@ -35,7 +35,9 @@
     "source/touchbar/apple-touchbar.c": "a35d7812ccf516b294b638c600b556a220f6458d5471d3b28463b78bfe99e7fc",
     "source/touchbar/hid-ids.h": "70b551b047fc5c4e8c029764b64ef0a6167aa93b55913459f8df487ec1be2974",
     "source/wifi/femctrl-v3.patch": "8bfb05620f2c304cf36d0665ec521b2b16af3bdd758f7b42d4a6d87d190a2789",
-    "source/wifi/local-resume-extension.patch": "e525824e3cade1136261d5e4b64f0e237ca6bc94bdab81301e0f94a4fac69f90"
+    "source/wifi/local-resume-extension.patch": "e525824e3cade1136261d5e4b64f0e237ca6bc94bdab81301e0f94a4fac69f90",
+    "source/wifi/cold-resume.patch": "507ad90bf317f6edca48b344f543b83b8c9d05f9336c7342a19d5c6afb3bdc72",
+    "source/kernel-compat/7.3.json": "bec706123794161c959dd280d49d88ea3350c73e902725efb9a84b0820bacddb"
   },
   "origins": {
     "sleep": {
@@ -58,7 +60,7 @@
     "wifi": {
       "source": "matching signed Fedora kernel source",
       "upstream_patch": "https://lore.kernel.org/linux-wireless/20261101172011.1591620-1-dolph-in@yandex.ru/",
-      "local_extension": "hot-resume FEM restoration, PCIe window restoration, read-back diagnostics"
+      "local_extension": "hot-resume FEM restoration, PCIe window restoration, read-back diagnostics; exact BCM43602/Apple0157/MacBookPro14,2 cold remove/probe on resume with PCIe-window selection before teardown"
     }
   }
 }

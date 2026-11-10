@@ -1,0 +1,33 @@
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
+@@ -7,6 +7,7 @@
+ #include <linux/module.h>
+ #include <linux/firmware.h>
+ #include <linux/pci.h>
++#include <linux/dmi.h>
+ #include <linux/vmalloc.h>
+ #include <linux/delay.h>
+ #include <linux/interrupt.h>
+@@ -2721,6 +2722,22 @@
+ 	brcmf_dbg(PCIE, "Enter, dev=%p, bus=%p\n", dev, bus);
+ 
+ 	/*
++	 * This board can retain a nonzero interrupt mask while its firmware
++	 * no longer answers commands after s2idle. Use the existing cold
++	 * remove/probe path before returning to userspace, where command
++	 * timeouts otherwise delay both Wi-Fi and NetworkManager recovery.
++	 */
++	if (devinfo->ci && devinfo->ci->chip == BRCM_CC_43602_CHIP_ID &&
++	    devinfo->pdev->subsystem_vendor == PCI_VENDOR_ID_APPLE &&
++	    devinfo->pdev->subsystem_device == 0x0157 &&
++	    dmi_match(DMI_PRODUCT_NAME, "MacBookPro14,2")) {
++		brcmf_info("MacBookPro14,2: reinitializing BCM43602 after resume\n");
++		/* Teardown accesses PCIe registers; retain the correct window. */
++		brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
++		goto cleanup;
++	}
++
++	/*
+ 	 * Local MacBookPro14,2 trial: firmware can survive sleep while the
+ 	 * platform control state changes. Restore FEM mode before deciding
+ 	 * whether a hot resume is possible. FEM access selects ChipCommon,

@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 
-from common import (ROOT, GROUPS, MODULES, build_outputs, kernel, module_record, require, run,
+from common import (ROOT, GROUPS, MODULES, build_outputs, kernel, module_record, prepare_wifi, require, run,
                     save, sha, unprivileged, verify_sources)
 
 
@@ -117,13 +117,14 @@ def main():
             work.parent.mkdir(parents=True, exist_ok=True)
             if group == 'wifi':
                 shutil.copytree(prepared / 'wifi-source', work)
-                for patch in ['femctrl-v3.patch', 'local-resume-extension.patch']:
-                    p = ROOT / 'source/wifi' / patch
-                    subprocess.run(['git', 'apply', '--check', '-p6', str(p)], cwd=work, check=True)
-                    subprocess.run(['git', 'apply', '-p6', str(p)], cwd=work, check=True)
+                wifi_review = prepare_wifi(work)
                 build = work / 'brcmfmac'
             else:
                 shutil.copytree(ROOT / 'source' / group, work)
+                if group == 'audio':
+                    for name in state['audio_compatibility'].get('reviewed_private_header_refreshes', {}):
+                        relative = name.removeprefix('sound/hda/')
+                        shutil.copyfile(prepared / 'audio-headers' / relative, work / relative)
                 build = work
             prefix = '-fdebug-prefix-map=' + str(ROOT) + '=/usr/src/macbookpro-2017-fedora '
             prefix += '-ffile-prefix-map=' + str(ROOT) + '=/usr/src/macbookpro-2017-fedora'
@@ -147,6 +148,10 @@ def main():
                 receipt['modules'][name] = record
             receipt['groups'][group] = {'build_passed': True,
                 'warning_categories': sorted(set(re.findall(r'\[-W([^\]]+)\]', (work / 'build.log').read_text())))}
+            if group == 'wifi':
+                receipt['groups'][group]['source_review'] = wifi_review
+            if group == 'audio':
+                receipt['groups'][group]['reviewed_private_header_refreshes'] = state['audio_compatibility'].get('reviewed_private_header_refreshes', {})
             save(receipt_path, receipt)
         receipt['status'] = 'all_five_built' if set(receipt['modules']) == set(MODULES) else 'partial_build'
         if receipt['status'] == 'all_five_built':

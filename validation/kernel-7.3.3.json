@@ -1,0 +1,238 @@
+{
+  "date": "2026-11-10",
+  "model": "MacBookPro14,2",
+  "kernel": "7.3.3-300.fc45.x86_64",
+  "installed_configuration_observation": {
+    "environment": "Fedora 45, separately maintained accepted installation on one machine",
+    "owner_explicitly_accepted": true,
+    "owner_reported_wifi_mbit_s_before_suspend": 150,
+    "owner_reported_wifi_mbit_s_after_resume": 100,
+    "throughput_method": "Owner reports; test endpoint/method not recorded",
+    "wifi_frequency_mhz_before_and_after": 5220,
+    "saved_wifi_power_saving": "disabled",
+    "mode": "s2idle",
+    "suspend_resume_log_interval_seconds": 1151,
+    "successful_cycles": 1,
+    "suspend_failures": 0,
+    "failed_stages": 0,
+    "selected_critical_count": 0,
+    "both_controller_trees_restored": true,
+    "firmware_reinitialized": true,
+    "femctrl_restored": true,
+    "gateway_packet_loss_percent_before_and_after": 0,
+    "gateway_average_latency_ms_before": 1.581,
+    "gateway_average_latency_ms_after": 1.302,
+    "new_public_binaries_or_generated_integration_used_in_hardware_test": false
+  },
+  "public_project_verification": {
+    "source_manifest_sha256": "6d78e70b9039a6f5b96a0f54a57d12921fa06a39c42ac62be2709c682dd3a3f0",
+    "kernel_profile_sha256": "bec706123794161c959dd280d49d88ea3350c73e902725efb9a84b0820bacddb",
+    "compiler": "gcc (GCC) 16.2.1 20261029 (Red Hat 16.2.1-3)",
+    "regression_tests_passed": 24,
+    "signed_packages_checked": [
+      {
+        "file": "kernel-devel-7.3.3-300.fc45.x86_64.rpm",
+        "sha256": "6f6d1edb7f48850666dc3005fff9487e10c35b3aaf911480b665e85355f78a73",
+        "signature_verified": true
+      },
+      {
+        "file": "kernel-7.3.3-300.fc45.src.rpm",
+        "sha256": "7f1a1de7f12d1dd9a1560ad6a9b0a59e0d75698c489671ba2297c1d27f7ca4e8",
+        "signature_verified": true
+      },
+      {
+        "file": "kernel-7.2.13-200.fc44.src.rpm",
+        "sha256": "0ccfb082765ab8756d351eba49f9415ce5d3ddc378e8fd0d430dbe240192d241",
+        "signature_verified": true
+      },
+      {
+        "file": "kernel-core-7.3.3-300.fc45.x86_64.rpm",
+        "sha256": "62d980c85e847723aa4c8b9298e24488446aa986a0e2a9add76015e44421da76",
+        "signature_verified": true
+      },
+      {
+        "file": "kernel-modules-core-7.3.3-300.fc45.x86_64.rpm",
+        "sha256": "ed15e99ed205711609dd82e46656347cbb8f7dea7f4c7af8d7d7838ab1b69d1b",
+        "signature_verified": true
+      },
+      {
+        "file": "kernel-modules-7.3.3-300.fc45.x86_64.rpm",
+        "sha256": "18cd3df1fae0b383bf742791e62b38c09b61c528215c420bb867cdc2df1d2604",
+        "signature_verified": true
+      },
+      {
+        "file": "kernel-modules-extra-7.3.3-300.fc45.x86_64.rpm",
+        "sha256": "344bdf601108640bebe1f197733097b106997119bc41fc53b6e53a5186f28f05",
+        "signature_verified": true
+      }
+    ],
+    "reviewed_watched_paths_changed": 185,
+    "public_sound_headers_compared": 203,
+    "refreshed_private_audio_headers": {
+      "sound/hda/common/hda_auto_parser.h": {
+        "baseline_sha256": "59c9e34e50f22e36ddc45dc22ca822838104e745884e6841bee73e65876a0716",
+        "target_sha256": "c1f46247b8dc659d53e4afc5c4eeb5cf8ce45878eda454a77a209b11fdaa8b78"
+      },
+      "sound/hda/common/hda_local.h": {
+        "baseline_sha256": "21b31260451c5fd4868f030cad31b86012acd3e5091caaa39a902d648073d2a9",
+        "target_sha256": "a70a791c8713eb236a0422612a8a9f81089b8ac29ba5b3d077be57315c3dc9c2"
+      }
+    },
+    "all_five_builds_passed": true,
+    "modules": {
+      "tb_ar_shim_mbp142": {
+        "name": "tb_ar_shim_mbp142",
+        "vermagic": "7.3.3-300.fc45.x86_64 SMP preempt mod_unload",
+        "version": "1.0.0-mbp142-review1",
+        "srcversion": "E20F12FCFA83ED26D5CD6CC",
+        "depends": "",
+        "license": "GPL",
+        "signer": "",
+        "file": "tb_ar_shim_mbp142.ko",
+        "sha256": "d07e59d4d84419254878a7b2240f9f75ce08266c081bf82466ec1b65527f6ab8",
+        "build_id": "cc41ac051cd7fac937267f92e82e98db7f4a11f2",
+        "imports_checked": 32,
+        "install_relative_path": "extra/tb_ar_shim_mbp142.ko"
+      },
+      "snd_hda_codec_cs8409": {
+        "name": "snd_hda_codec_cs8409",
+        "vermagic": "7.3.3-300.fc45.x86_64 SMP preempt mod_unload",
+        "version": "",
+        "srcversion": "",
+        "depends": "snd-hda-codec-generic,snd-hda-codec,snd-hda-scodec-component,snd-hda-core,snd",
+        "license": "GPL",
+        "signer": "",
+        "file": "snd-hda-codec-cs8409.ko",
+        "sha256": "1eb96b80ef275887b30ab49a807f2494f02ab9d3b54bc42901662014e5c616e4",
+        "build_id": "cf3832a614e76ae5f9ac3bb87ee6ba5c7bda6430",
+        "imports_checked": 83,
+        "install_relative_path": "updates/macbook-audio/snd-hda-codec-cs8409.ko"
+      },
+      "apple_ibridge": {
+        "name": "apple_ibridge",
+        "vermagic": "7.3.3-300.fc45.x86_64 SMP preempt mod_unload",
+        "version": "0.1-mbp142-review1",
+        "srcversion": "82E4696577C597CB967EEEE",
+        "depends": "",
+        "license": "GPL",
+        "signer": "",
+        "file": "apple-ibridge.ko",
+        "sha256": "0324bee2100dfbb12f5bef167b40f69ca4c304d652e9fa04b509a4a7d8aa71a1",
+        "build_id": "41710e4482eb3f23c60be503e14a108246bf7a2d",
+        "imports_checked": 37,
+        "install_relative_path": "extra/macbook-touchbar/apple-ibridge.ko"
+      },
+      "apple_touchbar": {
+        "name": "apple_touchbar",
+        "vermagic": "7.3.3-300.fc45.x86_64 SMP preempt mod_unload",
+        "version": "0.1-mbp142-review1",
+        "srcversion": "4F90A94F719D99F5D9FD1B0",
+        "depends": "",
+        "license": "GPL",
+        "signer": "",
+        "file": "apple-touchbar.ko",
+        "sha256": "9187f62b280a7db6ada5316b7e6d0a47446e9d6bca66404795bd132f82c94548",
+        "build_id": "77965d81079e372dbee80741c3202600c6e09f29",
+        "imports_checked": 60,
+        "install_relative_path": "extra/macbook-touchbar/apple-touchbar.ko"
+      },
+      "brcmfmac": {
+        "name": "brcmfmac",
+        "vermagic": "7.3.3-300.fc45.x86_64 SMP preempt mod_unload",
+        "version": "",
+        "srcversion": "",
+        "depends": "brcmutil,cfg80211,mmc_core",
+        "license": "Dual BSD/GPL",
+        "signer": "",
+        "file": "brcmfmac.ko",
+        "sha256": "1604a5fa20436a8da325240f3e9f539ece04262a8bdd6ae181763e1aa4ebd28b",
+        "build_id": "5ca0d9cb46c3e552be18401c08f42d11a392560a",
+        "imports_checked": 293,
+        "install_relative_path": "updates/macbook-wifi/brcmfmac.ko"
+      }
+    },
+    "groups": {
+      "sleep": {
+        "build_passed": true,
+        "warning_categories": []
+      },
+      "audio": {
+        "build_passed": true,
+        "warning_categories": [
+          "unused-but-set-variable=",
+          "unused-const-variable="
+        ],
+        "reviewed_private_header_refreshes": {
+          "sound/hda/common/hda_auto_parser.h": {
+            "baseline_sha256": "59c9e34e50f22e36ddc45dc22ca822838104e745884e6841bee73e65876a0716",
+            "target_sha256": "c1f46247b8dc659d53e4afc5c4eeb5cf8ce45878eda454a77a209b11fdaa8b78"
+          },
+          "sound/hda/common/hda_local.h": {
+            "baseline_sha256": "21b31260451c5fd4868f030cad31b86012acd3e5091caaa39a902d648073d2a9",
+            "target_sha256": "a70a791c8713eb236a0422612a8a9f81089b8ac29ba5b3d077be57315c3dc9c2"
+          }
+        }
+      },
+      "touchbar": {
+        "build_passed": true,
+        "warning_categories": []
+      },
+      "wifi": {
+        "build_passed": true,
+        "warning_categories": [],
+        "source_review": {
+          "patches": [
+            {
+              "file": "femctrl-v3.patch",
+              "sha256": "8bfb05620f2c304cf36d0665ec521b2b16af3bdd758f7b42d4a6d87d190a2789"
+            },
+            {
+              "file": "local-resume-extension.patch",
+              "sha256": "e525824e3cade1136261d5e4b64f0e237ca6bc94bdab81301e0f94a4fac69f90"
+            },
+            {
+              "file": "cold-resume.patch",
+              "sha256": "507ad90bf317f6edca48b344f543b83b8c9d05f9336c7342a19d5c6afb3bdc72"
+            }
+          ],
+          "patched_pcie_sha256": "72b069fe6ae7054aacc77563d7aa4242b664893a034fd47d885feb2513854b35"
+        }
+      }
+    },
+    "offline_dependency_checks_passed": true,
+    "module_lookups": {
+      "tb_ar_shim_mbp142": {
+        "selected": "extra/tb_ar_shim_mbp142.ko",
+        "dependency_resolution_passed": true
+      },
+      "snd_hda_codec_cs8409": {
+        "selected": "updates/macbook-audio/snd-hda-codec-cs8409.ko",
+        "dependency_resolution_passed": true
+      },
+      "apple_ibridge": {
+        "selected": "extra/macbook-touchbar/apple-ibridge.ko",
+        "dependency_resolution_passed": true
+      },
+      "apple_touchbar": {
+        "selected": "extra/macbook-touchbar/apple-touchbar.ko",
+        "dependency_resolution_passed": true
+      },
+      "brcmfmac": {
+        "selected": "updates/macbook-wifi/brcmfmac.ko",
+        "dependency_resolution_passed": true
+      }
+    },
+    "generated_systemd_unit_syntax_verified": true,
+    "installed": false,
+    "modules_loaded": false,
+    "hardware_validated": false
+  },
+  "limits": [
+    "The successful suspend/Wi-Fi test used the separately maintained installation, not these new public-project binaries or generated hooks.",
+    "One post-reboot cycle does not establish overnight/repeated-wake reliability, equal throughput or a precise reconnection latency.",
+    "Earlier firmware-command failures and slow 2.4 GHz fallback required the additional cold-resume fix; disabling power saving alone had not solved them.",
+    "No new all-device regression is claimed for the final cycle; previous audio/Touch Bar/camera reports are separate.",
+    "The source profile permits only exact reviewed 7.3.3 source/devel bytes; future releases stop for review.",
+    "No personalized board configuration, firmware, machine/network identifiers, private journals, private updater code or binary payloads are included."
+  ]
+}

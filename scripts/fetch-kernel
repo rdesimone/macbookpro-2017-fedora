@@ -11,7 +11,7 @@ import subprocess
 import sys
 
 from common import (ROOT, BASELINE, BASELINE_SHA, RUNTIME, WIRELESS, audio_check,
-                    kernel, require, rpm_check, run, save, sha, subset,
+                    kernel, kernel_profile, require, rpm_check, run, save, sha, subset, watched_check,
                     unprivileged, unpack_rpm, verify_sources)
 
 
@@ -54,6 +54,7 @@ def main():
         records.append(rpm_check(rpms / f'{name}-{ver}.{arch}.rpm', name, ver, arch))
     require(sha(rpms / f'kernel-{base_version}.src.rpm') == BASELINE_SHA,
             'The pinned Fedora audio comparison baseline differs')
+    profile = kernel_profile(a.kernel, records)
     output.mkdir(parents=True)
     report = {'kernel': a.kernel, 'status': 'preparing', 'source_manifest_sha256': source_identity,
               'fedora_release': release, 'packages': records, 'rpm_directory': str(rpms),
@@ -70,10 +71,13 @@ def main():
         print('Comparing audio APIs and watched power/input/Wi-Fi sources.', flush=True)
         old, old_watch, unused = subset(output / 'baseline-srpm', '7.2.13')
         new, new_watch, patches = subset(output / 'srpm', a.kernel.split('-')[0])
-        report['audio_compatibility'] = audio_check(old, new, headers)
-        changed = sorted(n for n in old_watch.keys() | new_watch.keys() if old_watch.get(n) != new_watch.get(n))
-        report['changed_watched_paths'] = changed
-        require(not changed, 'Watched PCI/USB/HID/power/Wi-Fi source changed; review required: ' + ', '.join(changed[:12]))
+        report['audio_compatibility'] = audio_check(old, new, headers, profile)
+        report['changed_watched_paths'] = watched_check(old_watch, new_watch, profile)
+        report['reviewed_kernel_profile'] = 'source/kernel-compat/7.3.json' if profile else None
+        for name in report['audio_compatibility']['reviewed_private_header_refreshes']:
+            path = output / 'audio-headers' / name.removeprefix('sound/hda/')
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(new[name])
         report['fedora_patch_paths'] = patches
         for name, data in new.items():
             if name.startswith(WIRELESS):
@@ -86,7 +90,7 @@ def main():
         # Freeze the entire prepared headers, matching Wi-Fi source and RPM patches.
         report['prepared_files'] = {
             p.relative_to(output).as_posix(): sha(p)
-            for folder in [output / 'devel', output / 'wifi-source']
+            for folder in [output / 'devel', output / 'wifi-source', output / 'audio-headers']
             for p in sorted(folder.rglob('*')) if p.is_file() and not p.is_symlink()
         }
         report['status'] = 'ready_to_build'

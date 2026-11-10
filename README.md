@@ -2,7 +2,7 @@
 
 Source code, patches and manual build/install instructions for the fixes used on **one MacBookPro14,2: the 13-inch MacBook Pro (2017, four Thunderbolt 3 ports, Touch Bar)**.
 
-**Tested environment:** Fedora 45 running `7.2.15-200.fc44.x86_64` with five matching custom modules. The `fc44` suffix is intentional: this accepted Fedora kernel was retained during the Fedora 45 userspace upgrade. The separate `7.2.15-300.fc45` build has not been tested. Detailed sleep/wake tests preceded the OS upgrade; startup checks and an owner quick functional check passed afterward. These results cover one machine and specific builds, not every Fedora 45/kernel update.
+**Accepted installation — 10 November 2026:** Fedora 45 running **`7.3.3-300.fc45.x86_64`** with five matching modules, the model-scoped cold-resume Wi-Fi fix and Wi-Fi power saving disabled. After a fresh reboot the owner measured about **150 Mbit/s**; after one successful 19-minute suspend sequence, about **100 Mbit/s**, still on 5 GHz with zero gateway packet loss. The earlier accepted `7.2.15-200.fc44.x86_64` kernel is retained for recovery. These results cover one machine and specific installed builds. The newly built public-project modules and rendered integration files have passed compilation/offline checks, but have not been installed or boot/suspend tested. See [the 7.3.3 review, results and limitations](docs/kernel-7.3.3.md).
 
 **Experimental software, provided without warranty. Compatibility with similar Macs is not guaranteed. Try it at your own risk.** Local code adaptations, build scripts and documentation were prepared with AI assistance from OpenAI Codex; upstream drivers retain their original authorship and licences. Have an installed, working recovery kernel and an independent way to read these instructions before changing drivers. A successful build does not prove hardware compatibility.
 
@@ -16,7 +16,7 @@ Fedora supplies the complete kernel. We build five additional/replacement **modu
 | Audio | `snd_hda_codec_cs8409` | Apple-specific CS8409 initialization, including working internal speakers |
 | Touch Bar | `apple_ibridge` | Connects Linux to the T1 bridge, with guarded power handling |
 | Touch Bar | `apple_touchbar` | Standard controls and held-Fn function keys |
-| Wi-Fi | `brcmfmac` | Restores radio front-end control state during initialization/resume, addressing loss of usable 5 GHz |
+| Wi-Fi | `brcmfmac` | Restores FEM state and performs model-scoped cold firmware recovery after resume |
 
 The two Touch Bar modules share one source directory and build command. Startup services, the sleep helper and narrow USB power rules are separate integration files, not more kernel modules. The camera uses Fedora's existing UVC driver; no camera module is built here. Touch ID is outside this project.
 
@@ -41,7 +41,7 @@ There are no packaged firmware blobs, personalized board files, prebuilt modules
 
 ## 1. Prerequisites and exact target
 
-Use Fedora 44/45 on x86_64. The current scripts deliberately stop outside the 7.2 kernel family or when watched source/API changes need review. They are manual build tools, not an unattended updater. They never install packages, load modules, edit `/etc` or `/boot`, suspend, reboot, or approve a kernel.
+Use Fedora 44/45 on x86_64. The scripts support 7.2-family syntax and a checksum-pinned **Fedora 45 / 7.3.3** compatibility profile. Other 7.3 releases and changed watched source/API inputs stop for a new review; syntax support is not compatibility approval. They are manual build tools, not an unattended updater. They never install packages, load modules, edit `/etc` or `/boot`, suspend, reboot, or approve a kernel.
 
 On a fresh development machine, install the build utilities explicitly:
 
@@ -57,7 +57,7 @@ Check the hardware and choose an **exact** kernel release:
 ```sh
 cat /sys/class/dmi/id/product_name
 uname -r
-KERNEL=7.2.15-200.fc44.x86_64
+KERNEL=7.3.3-300.fc45.x86_64
 ```
 
 `KERNEL` is a task variable. Set it deliberately for every build/install terminal session. Do not substitute whatever upstream kernel source happens to be newest.
@@ -71,6 +71,8 @@ python3 scripts/fetch-kernel "$KERNEL"
 ```
 
 This downloads the exact signed Fedora source/development RPMs, four matching runtime module RPMs for isolated checks, and the pinned `7.2.13-200.fc44` comparison source. It verifies signatures, package identities and the baseline digest; extracts without running package scriptlets; compares private/public audio interfaces and watched PCI/USB/HID/power/Wi-Fi sources; and prepares the matching Broadcom source. Local source outputs are under `local/kernel/$KERNEL/`. It does not install the kernel.
+
+For 7.3.3, [the exact-input profile](source/kernel-compat/7.3.json) pins signed source/development RPM hashes, the reviewed set of 185 changed watched paths, and two changed private audio headers. Only those exact matching headers are copied into the disposable audio build tree; preserved community sources stay unchanged. Additional/unrecognized source changes stop; there is no bypass flag. See [review details](docs/kernel-7.3.3.md).
 
 Alternatively, provide a directory containing those exact already-downloaded packages:
 
@@ -99,7 +101,7 @@ python3 scripts/build-module touchbar "$KERNEL"    # apple-ibridge.ko AND apple-
 python3 scripts/build-module wifi "$KERNEL"        # brcmfmac.ko
 ```
 
-Choose `all` or the individual sequence; do not run both over existing builds. Sources are copied into fresh `local/build/$KERNEL/<group>/` directories. The Wi-Fi patches are applied strictly to matching Fedora source. API/patch/build/import/vermagic failures stop the command and retain the failed tree/logs for diagnosis. Existing group outputs are not overwritten automatically. Investigate a failure, then deliberately remove only that disposable checkout's failed build/dist directories or use a fresh checkout for the corrected run.
+Choose `all` or the individual sequence; do not run both over existing builds. Sources are copied into fresh `local/build/$KERNEL/<group>/` directories. All three Wi-Fi patches are applied strictly and in order to matching Fedora source: upstream FEM v3, local hot-resume/window/read-back extension, then the accepted model-scoped cold-resume patch. A changed or already-fixed upstream context stops for review. API/patch/build/import/vermagic failures stop the command and retain the failed tree/logs for diagnosis. Existing group outputs are not overwritten automatically. Investigate a failure, then deliberately remove only that disposable checkout's failed build/dist directories or use a fresh checkout for the corrected run.
 
 Logs remain in `local/build/`. Upstream Wi-Fi Kbuild also compiles the stock WCC/BCA/CYW vendor helpers; only our `brcmfmac.ko` override is distributed in `dist`, and the offline check resolves its dependency against Fedora's packaged helper. The audio code retains its known unused-variable/table warning exceptions; other compiler errors remain fatal. Missing optional BTF tooling can cause a BTF-skipped notice. Neither those notices nor a successful compiler run establish runtime support.
 
@@ -119,7 +121,9 @@ The source/tooling checks can also be run without a kernel build:
 python3 -m unittest discover -s tests -v
 ```
 
-**Implementation verification, 8 November 2026:** all five modules built from this simplified layout for `7.2.15-200.fc44.x86_64` using signed cached Fedora inputs. Their exact-kernel identities, exported-symbol checks and isolated dependency resolution passed; nine build-boundary regression tests passed, and the generated systemd unit passed syntax verification. No newly built module or generated integration file was installed or loaded. The new build procedure and generated integration have not received a new boot/hardware/sleep trial. This is separate from the earlier working-machine validation above.
+**Implementation verification, 10 November 2026:** all five 7.3.3 modules built through this public project from signature-checked Fedora inputs. All imports, exact-kernel identities and isolated dependency checks passed; **24** regression tests and generated systemd-unit syntax checks passed. The patched Wi-Fi source matches the accepted installation's reviewed source. These new binaries and generated hooks remain uninstalled and hardware untested. [Sanitized evidence](validation/kernel-7.3.3.json).
+
+**Historical implementation verification, 8 November 2026:** all five modules built from this simplified layout for `7.2.15-200.fc44.x86_64` using signed cached Fedora inputs. Their exact-kernel identities, exported-symbol checks and isolated dependency resolution passed; nine build-boundary regression tests passed, and the generated systemd unit passed syntax verification. No newly built module or generated integration file was installed or loaded. The new build procedure and generated integration have not received a new boot/hardware/sleep trial. This is separate from the earlier working-machine validation above.
 
 ## 5. Manual installation reference
 
@@ -234,7 +238,7 @@ Restart normally when ready, then verify actual Wi-Fi traffic and band/frequency
 
 The board file stayed unchanged. A restart with the original driver could already reach about 156 Mbit/s, but sleep could lose usable 5 GHz. The patched `brcmfmac` restores a radio front-end (FEM) control bit before firmware initialization; our extension also restores it on the hot-resume path and reselects the PCIe register window. A controlled patched-driver startup measured 155.6 Mbit/s. These changes are in `source/wifi/*.patch`, applied to the matching Fedora `brcmfmac/pcie.c`.
 
-Temporary board-flag and Wi-Fi power-policy experiments were restored. This is a hardware initialization/resume fix, not an access-point-specific tuning profile or a speed guarantee. An overnight connected-but-no-internet incident was later recovered by reconnecting; its cause remains unresolved. Long-term reliability and every access point/accessory combination are not established.
+Earlier board-flag and power-policy experiments did not solve the failure. For the accepted 7.3.3 setup, the original board file stays unchanged and Wi-Fi power saving remains disabled. On this exact model the third patch selects the PCIe core and uses the existing cold remove/probe path before returning to userspace; firmware-load FEM restoration remains in place. Disabling power saving alone had not repaired earlier slow wakes. This is a hardware initialization/resume fix, not an access-point-specific tuning profile or a speed guarantee. An overnight connected-but-no-internet incident was later recovered by reconnecting; its cause remains unresolved. Long-term reliability and every access point/accessory combination are not established.
 
 ## Source attribution and licences
 
@@ -243,7 +247,7 @@ Temporary board-flag and Wi-Fi power-policy experiments were restored. This is a
 | Sleep | [orospakr/linux-apple-alpine-ridge-suspend](https://github.com/orospakr/linux-apple-alpine-ridge-suspend/tree/155ffe3a4a963bc8d84df72fa53f14eb16ea9a60) | Separate controller contexts, exact-model/two-tree guards, explicit loading |
 | Audio | [davidjo/snd_hda_macbookpro](https://github.com/davidjo/snd_hda_macbookpro/tree/89b22ff90b86468b186706861dd18663562defa7) + signed Fedora 7.2.13 source | Preserved community Apple initialization and matching HDA dependencies; patch context refreshed for Fedora layout |
 | Touch Bar | [AJ-dev-i60/t1-touchbar](https://github.com/AJ-dev-i60/t1-touchbar/tree/20d65c7b0fe6d05ea9734f869b27384a62de5109), [monomyth resume revision](https://github.com/monomyth/t1-touchbar/tree/a33c7eb27777339c047b8f532d1e6baebaec46bd) | Resume fixes and narrow model/HID/interface/power guards; Ronald Tschalär and other notices retained |
-| Wi-Fi | Matching Fedora/Linux `brcmfmac`; [Sergey Armodin's v3 proposal](https://lore.kernel.org/linux-wireless/20261101172011.1591620-1-dolph-in@yandex.ru/) | Local hot-resume FEM restoration, register-window restoration and read-back diagnostics for Apple subsystem `0157`; not a published upstream v4 |
+| Wi-Fi | Matching Fedora/Linux `brcmfmac`; [Sergey Armodin's v3 proposal](https://lore.kernel.org/linux-wireless/20261101172011.1591620-1-dolph-in@yandex.ru/) | Local hot-resume FEM/window/read-back extension plus BCM43602 / Apple `0157` / MacBookPro14,2 cold-resume recovery; not a published upstream v4 |
 
 Original project scripts/adaptations are licensed under **GPL-2.0-only**. Existing file notices retain their original terms, including GPL-2.0-or-later audio files and ISC Broadcom code. The licence texts are in `LICENSE`/`LICENSES/`. The Wi-Fi patches include context from ISC-licensed driver code; retain its ISC notices and the upstream attribution when applying them. Original local additions are GPL-2.0-only. The external board configuration is excluded and is not covered by this project's licence. Kernel source downloads carry their own original licences/notices; no complete Linux source archive is committed here.
 

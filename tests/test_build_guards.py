@@ -16,7 +16,8 @@ import common
 class Guards(unittest.TestCase):
     def test_exact_kernel_scope(self):
         self.assertEqual(common.kernel('7.2.15-200.fc44.x86_64'), '7.2.15-200.fc44.x86_64')
-        for bad in ['latest', '7.2.15', '../../etc', '7.3.1-1.fc45.x86_64', '7.2.15-1.fc46.x86_64']:
+        self.assertEqual(common.kernel('7.3.3-300.fc45.x86_64'), '7.3.3-300.fc45.x86_64')
+        for bad in ['latest', '7.2.15', '../../etc', '7.3.1-1.fc44.x86_64', '7.4.1-1.fc45.x86_64', '7.2.15-1.fc46.x86_64']:
             with self.assertRaises(RuntimeError):
                 common.kernel(bad)
 

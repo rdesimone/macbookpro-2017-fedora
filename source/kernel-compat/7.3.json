@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "reference_kernel": "7.3.3-300.fc45.x86_64",
+  "baseline_kernel": "7.2.13-200.fc44.x86_64",
+  "reference_source_rpm_sha256": "7f1a1de7f12d1dd9a1560ad6a9b0a59e0d75698c489671ba2297c1d27f7ca4e8",
+  "reference_devel_rpm_sha256": "6f6d1edb7f48850666dc3005fff9487e10c35b3aaf911480b665e85355f78a73",
+  "reviewed_on": "2026-11-10",
+  "review": "Use the exact matching Fedora private headers in a separate build tree. snd_hda_get_pin_label loses its unused indexp parameter; the preserved codec sources contain no calls to it. hda_local.h adds the unused hda_append_suffix inline function. No structure layout change appears in these two diffs. All other private dependencies and matching public headers remain independently checked. This profile is source compatibility review, not runtime approval.",
+  "audio_headers": {
+    "sound/hda/common/hda_auto_parser.h": {
+      "baseline_sha256": "59c9e34e50f22e36ddc45dc22ca822838104e745884e6841bee73e65876a0716",
+      "target_sha256": "c1f46247b8dc659d53e4afc5c4eeb5cf8ce45878eda454a77a209b11fdaa8b78"
+    },
+    "sound/hda/common/hda_local.h": {
+      "baseline_sha256": "21b31260451c5fd4868f030cad31b86012acd3e5091caaa39a902d648073d2a9",
+      "target_sha256": "a70a791c8713eb236a0422612a8a9f81089b8ac29ba5b3d077be57315c3dc9c2"
+    }
+  },
+  "changed_watched_paths_count": 185,
+  "changed_watched_paths_sha256": "3752147ed3bd486cce3145df8b6519b892a9ca0286388bc26d820ef5615aa5b6",
+  "source_review": "Reviewed shared HID, USB core, PCI/PCIe power, suspend and brcmfmac changes; many of the 185 watched paths concern unrelated hardware. Exact source/devel hashes and the changed-path digest scope this exception to the reviewed 7.3.3 inputs. Future releases need a separate review; there is no bypass flag.",
+  "public_build_hardware_validated": false
+}
